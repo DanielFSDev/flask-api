@@ -1,8 +1,6 @@
-from datetime import timedelta
-
 from flask import Flask, request, jsonify
 from flasgger import Swagger
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required
 import re
 import os
 app = Flask(__name__)
