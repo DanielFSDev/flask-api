@@ -1,10 +1,57 @@
+from datetime import timedelta
+
 from flask import Flask, request, jsonify
 from flasgger import Swagger
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+import re
+import os
 app = Flask(__name__)
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = os.getenv('JWT_ACCESS_TOKEN_EXPIRES')
+app.config['JWT_ALGORITHM'] = os.getenv('JWT_ALGORITHM')
+
+jwt = JWTManager(app)
 swagger = Swagger(app)
 usuarios = []
 
+
+credenciais = {'admin': 'senha123'}
+@app.route('/login', methods=['POST'])
+def login():
+    """
+    Realizar login e obter token JWT
+    ---
+    tags:
+      - Autenticação
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            usuario:
+              type: string
+            senha:
+              type: string
+    responses:
+      200:
+        description: Token JWT gerado com sucesso
+      401:
+        description: Credenciais inválidas
+    """
+    dados = request.get_json()
+    usuario = dados.get('usuario')
+    senha = dados.get('senha')
+
+    if credenciais.get(usuario) == senha:
+        token = create_access_token(identity=usuario)
+        return jsonify({'token': token}), 200
+
+    return jsonify({'erro': 'Credenciais inválidas'}), 401
+
 @app.route('/usuarios', methods=['POST'])
+@jwt_required()
 def cadastrar_usuario():
     """
     Cadastrar um novo usuário
@@ -33,6 +80,12 @@ def cadastrar_usuario():
     if erro:
         return resposta_erro(erro, 400)
 
+    if not re.match(r"[^@]+@[^@]+\.[^@]+", dados['email']):
+        return resposta_erro("Formato de email inválido", 400)
+
+    if any(u['email'] == dados['email'] for u in usuarios):
+        return resposta_erro("Email já cadastrado", 400)
+
     usuario = {
         'id': len(usuarios) + 1,
         'nome': dados['nome'],
@@ -42,6 +95,7 @@ def cadastrar_usuario():
     return jsonify(usuario), 201
 
 @app.route('/usuarios', methods=['GET'])
+@jwt_required()
 def listar_usuarios():
     """
     Listar todos os usuários
@@ -55,6 +109,7 @@ def listar_usuarios():
     return jsonify(usuarios), 200
 
 @app.route('/usuarios/<int:usuario_id>', methods=['DELETE'])
+@jwt_required()
 def deletar_usuario(usuario_id):
     """
     Deletar um usuário pelo ID
@@ -81,6 +136,7 @@ def deletar_usuario(usuario_id):
     return jsonify({'mensagem': 'Usuário deletado com sucesso'}), 200
 
 @app.route('/usuarios/<int:usuario_id>', methods=['PUT'])
+@jwt_required()
 def alterar_usuario(usuario_id):
     """
     Alterar os dados de um usuário pelo ID
