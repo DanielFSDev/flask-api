@@ -178,11 +178,9 @@ def alterar_usuario(usuario_id):
     return jsonify(usuario), 200
 
 def resposta_erro(mensagem, codigo):
-    """Função para padronizar respostas de erro."""
     return jsonify({'erro': mensagem}), codigo
 
 def validar_dados(dados, campos_obrigatorios):
-    """Valida se os campos obrigatórios estão presentes e são válidos."""
     for campo, tipo in campos_obrigatorios.items():
         if campo not in dados:
             return f"Campo '{campo}' é obrigatório."
